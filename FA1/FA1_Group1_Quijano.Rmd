@@ -1,0 +1,45 @@
+---
+title: "FA1_EDA"
+author: "Julian Philip S. Quijano"
+date: "2026-01-21"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r 1}
+library(tidyverse)
+#1
+df <- read.csv("cytof_one_experiment.csv")
+
+a <- ecdf(df$NKp30)
+
+ggplot(df, aes(x = NKp30)) +
+  stat_ecdf(geom = 'step', color = 'blue', linewidth = 1.5) +
+  labs(title = "NKp30 ECDF", x = "X", y = 'F(x)') +
+  theme_minimal()
+
+ggplot(df, aes(x = NKp30)) +
+  geom_histogram(binwidth = 1, fill = 'blue', color = 'black') +
+  labs(title = "NKp30 ECDF", x = "X", y = 'Count') +
+  theme_minimal()
+
+```
+
+### What does the plot tell you about the distribution of the values in that columns?
+
+It seems that 50% of all values in NKp30 are $\leq 3.78$, also from visual inspection, with the S shape of the ECDF and the bell shape of the histogram, NKp30 is normal and the mean falls at 3.78 and majority of the datapoints are below the mean.
+
+```{r 2}
+#2
+
+qqplot(df$NKp30, df$KIR3DL1)
+abline(0, 1, col='red')
+```
+### What does the Q-Q plot tell you about similarities or differences between the distributions of the values in the two columns?
+
+With the graph plateauing at the start, it shows that values in NKp30 are similar or clustered, while values in KIR3DL1 are more spread out. With the graph rising in the middle, it shows that the values from NKp30 are spreading out. Finally, the end of the line follows and almost parallels the 45 degree line, showing that the data from the two datasets have similar values by the end.
+
+Github Link: https://github.com/SylTana/DSC1105-Exploratory-Data-Analysis/tree/main/FA1
