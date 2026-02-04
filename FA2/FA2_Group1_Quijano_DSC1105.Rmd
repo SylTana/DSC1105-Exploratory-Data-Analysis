@@ -1,0 +1,77 @@
+---
+title: "FA2_Group2_Quijano(DSC1105)"
+author: "Julian Philip S. Quijano"
+date: "2026-02-04"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For the first set of questions, we will look again at the CyTOF data Each row in the dataset represents a cell, and each column in the dataset represents a protein, and the value is element i, j of the dataset represents the amount of protein j in cell i.
+
+Use pivot_longer to reshape the dataset into one that has two columns, the first giving the protein identity and the second giving the amount of the protein in one of the cells. The dataset you get should have 1750000 rows (50000 cells in the original dataset times 35 proteins).
+
+Use group_by and summarise to find the median protein level and the median absolute deviation of the protein level for each marker. (Use the R functions median and mad).
+
+Make a plot with MAD on the x-axis and median on the y-axis. This is known as a spreadlocation (s-l) plot. What does it tell you about the relationship betwen the median and the MAD?
+
+```{r}
+library(tidyverse)
+library(dcldata)
+```
+
+```{r}
+cytof_data <- read.csv('cytof_one_experiment.csv')
+head(cytof_data)
+
+cytof_pivot <-  cytof_data %>%
+    pivot_longer(cols = everything(),
+               names_to = 'protein',
+               values_to = 'count')
+
+head(cytof_pivot)
+
+protein_summary <- cytof_pivot %>%
+  group_by(protein) %>%
+  summarise(median = median(count),
+            median_absolute_deviation = mad(count))
+
+protein_summary %>%
+  ggplot(aes(x = median_absolute_deviation, y = median)) +
+          geom_point() +
+          theme_minimal()
+         
+
+```
+
+#### What does it tell you about the relationship betwen the median and the MAD?
+
+Our values are heteroscedastic, or they do not have constant variance. Additionaly, we can see that low median = small mad, high median = larger mad. In short, there exists a positive association between location (median) and spread (MAD).
+
+Next, for more practice pivoting, we will look at a dataset from dcldata. Install the package dcldata using
+
+install.packages("remotes") remotes::install_github("dcl-docs/dcldata")
+
+(you don’t need the first line if the remotes package is already installed).
+
+Load the package using library(dcldata).
+
+Load the dataset example_gymnastics_2 using the command data(example_gymnastics_2). Notice that the column names are of the form event_year.
+
+4.  Using either pivot_longer on its own or pivot_longer in combination with separate, reshape the dataset so that it has columns for country, event, year, and score.
+
+```{r}
+gym_data <- example_gymnastics_2
+
+gym_data %>%
+  pivot_longer(
+    cols = -c(country),
+    names_to = c("Event", "Year"),
+    names_sep = ("_"),
+    values_to = "Score"
+  )
+```
+
+Github Link: <https://github.com/SylTana/DSC1105-Exploratory-Data-Analysis/tree/main/FA2>
