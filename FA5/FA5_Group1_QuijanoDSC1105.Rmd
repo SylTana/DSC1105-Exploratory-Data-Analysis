@@ -1,0 +1,123 @@
+---
+title: "FA5_Group1_Quijano_DSC1105"
+author: "Julian Philip S. Quijano"
+date: "2026-04-16"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(reshape2)
+```
+
+```{r}
+data <- read.csv("adult.csv")
+head(data)
+```
+
+```{r}
+data <- data %>%
+  mutate(education_group = case_when(
+    education %in% c("Preschool", "1st-4th", "5th-6th") ~ "Elementary",
+    education %in% c("7th-8th", "9th") ~ "Middle School",
+    education %in% c("10th", "11th", "12th", "HS-grad") ~ "High School",
+    education %in% c("Some-college", "Assoc-acdm", "Assoc-voc") ~ "College / Associate",
+    education %in% c("Bachelors", "Masters", "Doctorate", "Prof-school") ~ "Advanced",
+    TRUE ~ NA_character_
+  ))
+
+anyNA(data)
+
+table_ed_inc <- table(data$education_group, data$income)
+
+table_with_totals <- addmargins(table_ed_inc)
+
+row_percent <- prop.table(table_ed_inc, margin = 1) * 100
+
+combined <- cbind(table_ed_inc, round(row_percent, 2))
+
+```
+```{r}
+apa_table <- as.data.frame.matrix(table_ed_inc) %>%
+  mutate(Total = rowSums(.)) %>%
+  mutate(`<=50K (%)` = paste0(`<=50K`, " (", round(`<=50K`/Total*100, 2), "%)"),
+         `>50K (%)` = paste0(`>50K`, " (", round(`>50K`/Total*100, 2), "%)")) %>%
+  select(`<=50K (%)`, `>50K (%)`, Total)
+
+apa_table
+```
+```{r}
+chisq_test = chisq.test(table(data$education_group, data$income))
+
+chi_stat <- chisq_test$statistic   
+chi_dof <- chisq_test$parameter   
+chi_p <- chisq_test$p.value
+
+print("A chi-square test of independence showed a significant association between education level and income, X^2(df = 4) = 3738.87, p < .001. Since p < .05, the relationship between education level and income is statistically significant.")
+```
+
+```{r}
+tab_ed_inc <- table(data$education_group, data$income)
+tab_ed_inc
+
+chisq_test <- chisq.test(tab_ed_inc)
+
+expected <- chisq_test$expected
+
+std_res <- chisq_test$stdres
+
+round(expected, 2)
+round(std_res, 2)
+```
+
+```{r}
+res_df <- melt(std_res)
+
+ggplot(res_df, aes(x = Var2, y = Var1, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(value, 2)), size = 4) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  labs(
+    title = "Heatmap of Standardized Residuals",
+    x = "Income",
+    y = "Education Level",
+    fill = "Std Residual"
+  ) +
+  theme_minimal()
+```
+
+#### a.
+A chi-square test of independence revealed a significant association between education level and income, X^2(df = 4) = 3738.87, p < 0.05. This suggests that income distribution varies across education levels.
+
+
+#### b.
+All categories show significant deviations, but key ones:
+
+Advanced (>50K): z = 59.04 → far more high-income individuals than expected
+
+Advanced (<=50K): z = -59.04 → far fewer low-income individuals than expected
+
+High School (<=50K): z = 34.67 → overrepresented in lower income
+
+High School (>50K): z = -34.67 → underrepresented in higher income
+
+Elementary & Middle School also strongly:
+
+Overrepresented in <=50K
+
+Underrepresented in >50K
+
+
+#### c.
+Higher education strongly predicts higher income — individuals in the Advanced category are dramatically overrepresented in the >50K group.
+
+Lower education levels are concentrated in lower income brackets, especially Elementary and Middle School groups.
+
+High School and College/Associate groups fall in between, but still skew toward <= 50K income.
+
