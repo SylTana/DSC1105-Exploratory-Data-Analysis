@@ -1,0 +1,163 @@
+---
+title: "FA6_Quijano"
+author: "Julian Philip S. Quijano"
+date: "2026-05-01"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(caret)
+library(nnet)
+library(MLmetrics)
+```
+
+```{r}
+data <- read.csv("customer_segmentation.csv")
+```
+
+```{r}
+colnames(data) <- c(
+  "CustomerID", "Age", "Income", "Gender",
+  "Category", "AvgSpend", "Visits", "Segment"
+)
+```
+
+```{r}
+str(data)
+summary(data)
+head(data)
+colSums(is.na(data))
+```
+
+
+```{r}
+table(data$Segment)
+
+ggplot(data, aes(x = Segment, fill = Segment)) +
+  geom_bar() +
+  theme_minimal()
+```
+
+```{r}
+ggplot(data, aes(Age)) +
+  geom_histogram(bins = 20, fill = "steelblue") +
+  theme_minimal()
+
+ggplot(data, aes(Income)) +
+  geom_histogram(bins = 20, fill = "darkgreen") +
+  theme_minimal()
+
+ggplot(data, aes(AvgSpend)) +
+  geom_histogram(bins = 20, fill = "darkred") +
+  theme_minimal()
+```
+
+```{r}
+data$Gender <- as.factor(data$Gender)
+data$Category <- as.factor(data$Category)
+data$Segment <- as.factor(data$Segment)
+```
+
+```{r}
+dummies <- dummyVars(Segment ~ ., data = data)
+data_encoded <- data.frame(predict(dummies, newdata = data))
+
+# Add target back
+data_encoded$Segment <- data$Segment
+
+preProc <- preProcess(
+  data_encoded[, !colnames(data_encoded) %in% c("Segment")],
+  method = c("center", "scale")
+)
+
+data_scaled <- predict(preProc, data_encoded)
+
+data_final <- data_scaled
+```
+
+```{r}
+set.seed(123)
+
+trainIndex <- createDataPartition(data_final$Segment, p = 0.8, list = FALSE)
+
+trainData <- data_final[trainIndex, ]
+testData <- data_final[-trainIndex, ]
+```
+
+```{r}
+model <- multinom(Segment ~ ., data = trainData)
+
+summary(model)
+```
+
+```{r}
+control <- trainControl(method = "cv", number = 5)
+
+tuned_model <- train(
+  Segment ~ .,
+  data = trainData,
+  method = "multinom",
+  trControl = control,
+  tuneLength = 5
+)
+
+print(tuned_model)
+
+predictions <- predict(model, testData)
+probabilities <- predict(model, testData, type = "prob")
+```
+
+```{r}
+cm <- confusionMatrix(predictions, testData$Segment)
+print(cm)
+
+LogLoss(probabilities, testData$Segment)
+
+cm_table <- as.data.frame(cm$table)
+
+ggplot(cm_table, aes(Prediction, Reference, fill = Freq)) +
+  geom_tile() +
+  geom_text(aes(label = Freq)) +
+  scale_fill_gradient(low = "white", high = "blue") +
+  theme_minimal()
+```
+
+```{r}
+coef(model)
+
+data$Income_Age <- data$Income * data$Age
+
+dummies <- dummyVars(Segment ~ ., data = data)
+data_encoded <- data.frame(predict(dummies, newdata = data))
+data_encoded$Segment <- data$Segment
+
+preProc <- preProcess(
+  data_encoded[, !colnames(data_encoded) %in% c("Segment")],
+  method = c("center", "scale")
+)
+
+data_scaled <- predict(preProc, data_encoded)
+data_final <- data_scaled
+
+preProc <- preProcess(
+  data_encoded[, !colnames(data_encoded) %in% c("Segment")],
+  method = c("center", "scale")
+)
+
+data_scaled <- predict(preProc, data_encoded)
+data_final <- data_scaled
+
+model <- multinom(Segment ~ ., data = trainData)
+
+coef(model)
+```
+A multinomial logistic regression model was developed to classify customers into Budget, Regular, and Premium segments based on demographic and behavioral features. The dataset was first preprocessed by encoding categorical variables (gender and product category) and standardizing numerical variables such as age, income, and average spending. The data was then split into training and testing sets (80/20). The model was trained on the training set and evaluated on the test set using metrics including accuracy, confusion matrix, precision, recall, and log-loss.
+
+The model achieved an accuracy of 34.58%, which is only slightly above the baseline probability of random guessing. The confusion matrix revealed that the model struggled to correctly distinguish between segments, particularly for Premium customers, which had low sensitivity. Among the features, Average Spend per Visit and Annual Income appeared to have the strongest influence on predictions, as they are directly related to customer purchasing behavior. However, the overall weak performance suggests that these relationships are not sufficiently captured by a linear model.
+
+To improve segmentation, more advanced models such as decision trees or ensemble methods (e.g., random forests or gradient boosting) should be considered, as they can capture nonlinear relationships. Additionally, feature engineering—such as creating interaction terms or incorporating more detailed behavioral data—may enhance predictive performance. From a business perspective, targeting strategies could still leverage spending behavior, with high spenders prioritized for premium offers and lower spenders targeted with discounts, but more accurate segmentation would require improved modeling techniques.
